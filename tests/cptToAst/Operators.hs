@@ -16,7 +16,7 @@ import Cpt (Cpt (Integer, Symbol, List))
 
 operatorTestList :: Test
 operatorTestList = TestList [
-    simpleAdd, simpleDivide, simpleTimes,
+    simpleAdd, simpleMinus, simpleDivide, simpleTimes,
     simpleModulo, errorMinus, errorDivide,
     errorModuloNoArguments, errorModuloOneArgument, errorModuloTooMuchArguments
   ]
@@ -74,17 +74,17 @@ errorDivide = TestCase (assertEqual "For Cpt < / >"
 errorModuloNoArguments :: Test
 errorModuloNoArguments = TestCase (assertEqual "For Cpt < mod >"
     (cptToAst (List [Symbol "/", Integer 4, Integer 0]))
-    (Nothing)
+    Nothing
   )
 
 errorModuloOneArgument :: Test
 errorModuloOneArgument = TestCase (assertEqual "For Cpt < mod 3 >"
     (cptToAst (List [Symbol "mod", Integer 3]))
-    (Nothing)
+    Nothing
   )
 
 errorModuloTooMuchArguments :: Test
 errorModuloTooMuchArguments = TestCase (assertEqual "For Cpt < mod 3 4 5 6 >"
     (cptToAst (List [Symbol "mod", Integer 3, Integer 4, Integer 5, Integer 6]))
-    (Nothing)
+    Nothing
   )
