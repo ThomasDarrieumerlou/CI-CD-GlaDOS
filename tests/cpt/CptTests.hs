@@ -2,29 +2,31 @@ module CptTests (cptTestList) where
 
 import Test.HUnit
 
-import Cpt (Cpt (Integer, Symbol, List), getSymbol, getInteger, getList)
+import Cpt (Cpt (Literal, Symbol, List), getSymbol, getLiteral, getList)
+import Literal (Literal (Integer, Inexact, Floating, Boolean))
 
 -- -------------------------------------------------------------------------- --
 --                                  Test list                                 --
 -- -------------------------------------------------------------------------- --
 
 cptTestList :: Test
-cptTestList = TestList [ getSymbolNormal, getSymbolInt, getSymbolList, getIntegerInt, getIntegerSymbol, getIntegerList]
+cptTestList = TestList [ getSymbolSymbol, getSymbolInt, getSymbolList, getLiteralInteger, getLiteralInexact, 
+    getLiteralFloat, getLiteralBool, getLiteralSymbol, getLiteralList, getListList, getListInt, getListSymbol]
 
 -- -------------------------------------------------------------------------- --
 --                               getSymbol Tests                              --
 -- -------------------------------------------------------------------------- --
 
-getSymbolNormal :: Test
-getSymbolNormal = TestCase (assertEqual "For getSymbol \"s\""
+getSymbolSymbol :: Test
+getSymbolSymbol = TestCase (assertEqual "For getSymbol \"s\""
     (Just "s")
     (getSymbol (Symbol "s"))
     )
 
 getSymbolInt :: Test
-getSymbolInt = TestCase (assertEqual "For getSymbol Int"
+getSymbolInt = TestCase (assertEqual "For getSymbol Literal Int"
     Nothing
-    (getSymbol (Integer 1))
+    (getSymbol (Literal (Integer 1)))
     )
 
 getSymbolList :: Test
@@ -34,45 +36,63 @@ getSymbolList = TestCase (assertEqual "For getSymbol list"
     )
 
 -- -------------------------------------------------------------------------- --
---                              getInteger Tests                              --
+--                              getLiteral Tests                              --
 -- -------------------------------------------------------------------------- --
 
-getIntegerInt :: Test
-getIntegerInt = TestCase (assertEqual "For getInteger 1"
-    (Just 1)
-    (getInteger (Integer 1))
+getLiteralInteger :: Test
+getLiteralInteger = TestCase (assertEqual "For getLiteral Int"
+    (Just (Integer 1))
+    (getLiteral (Literal (Integer 1)))
     )
 
-getIntegerSymbol :: Test
-getIntegerSymbol = TestCase (assertEqual "For getInteger symbol"
-    Nothing
-    (getInteger (Symbol "a"))
+getLiteralInexact :: Test
+getLiteralInexact = TestCase (assertEqual "For getLiteral Inexact"
+    (Just (Inexact 1 2))
+    (getLiteral (Literal (Inexact 1 2)))
     )
 
-getIntegerList :: Test
-getIntegerList = TestCase (assertEqual "For getInteger [\"s\"]"
+getLiteralFloat :: Test
+getLiteralFloat = TestCase (assertEqual "For getLiteral float"
+    (Just (Floating 1.42))
+    (getLiteral (Literal (Floating 1.42)))
+    )
+
+getLiteralBool :: Test
+getLiteralBool = TestCase (assertEqual "For getLiteral bool"
+    (Just (Boolean True))
+    (getLiteral (Literal (Boolean True)))
+    )
+
+getLiteralSymbol :: Test
+getLiteralSymbol = TestCase (assertEqual "For getLiteral symbol"
     Nothing
-    (getInteger (List [Symbol "s"]))
+    (getLiteral (Symbol "s"))
+    )
+
+getLiteralList :: Test
+getLiteralList = TestCase (assertEqual "For getLiteral list"
+    Nothing
+    (getLiteral (List [Symbol "s"]))
     )
 
 -- -------------------------------------------------------------------------- --
 --                                getList Tests                               --
 -- -------------------------------------------------------------------------- --
 
--- getListList :: Test
--- getListList = TestCase (assertEqual "For getList [\"s\"]"
---     (Just [Symbol "s"])
---     (getList (List [Symbol "s"]))
---     )
+getListList :: Test
+getListList = TestCase (assertEqual "For getList [\"s\"]"
+    (Just [Symbol "s"])
+    (getList (List [Symbol "s"]))
+    )
 
--- getListInt :: Test
--- getListInt = TestCase (assertEqual "For getList 1"
---     Nothing
---     (getList (Integer 1))
---     )
+getListInt :: Test
+getListInt = TestCase (assertEqual "For getList 1"
+    Nothing
+    (getList (Literal (Integer 1)))
+    )
 
--- getListSymbol :: Test
--- getListSymbol = TestCase (assertEqual "For getList symbol"
---     Nothing
---     (getList (Symbol "a"))
---     )
+getListSymbol :: Test
+getListSymbol = TestCase (assertEqual "For getList symbol"
+    Nothing
+    (getList (Symbol "a"))
+    )
