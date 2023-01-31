@@ -29,6 +29,7 @@ library
       Lexer
       Evaluation
       Literal
+      Lib
   other-modules:
       Paths_glados
   hs-source-dirs:

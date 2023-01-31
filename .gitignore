@@ -21,9 +21,5 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
-<<<<<<< HEAD
 glados
-=======
-.gitignore
 .vscode
->>>>>>> 5262e0c... feat(Ast): add evaluate operator with only value
