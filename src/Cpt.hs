@@ -7,7 +7,7 @@
 
 module Cpt (
     Cpt (Literal, Symbol, List),
-    getSymbol, getLiteral, getList
+    getSymbol, getLiteral, getList, printTree
   ) where
 
 import Data.Maybe (fromJust)
