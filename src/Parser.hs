@@ -1,4 +1,8 @@
-module Parser (Parser) where
+module Parser (
+    Parser, parseChar, parseAnyChar,
+    parseOr, parseAnd, parseAndWith,
+    parseMany, parseSome, parseUInt, parseInt,
+    ParseError (..), ParseErrorContent (..)) where
 
 -- data ListError = ParenthesisNotClosed
 --     | MissingComa
@@ -11,10 +15,10 @@ data ParseErrorContent = InvalidSymbol
     | InvalidLiteral
     | InvalidList -- ListError
     | CharacterNotFound
-    deriving Show
+    deriving (Eq, Show)
 
 data ParseError = ParseError !Pos !ParseErrorContent
-    deriving Show
+    deriving (Eq, Show)
 
 type Parser a = String -> Either ParseError (a, String)
 
@@ -22,14 +26,14 @@ type Parser a = String -> Either ParseError (a, String)
 parseChar :: Char -> Parser Char
 parseChar c (a:as)
   | c == a = Right (c, as)
-  | otherwise = Left (ParseError 80 CharacterNotFound)
+  | otherwise = Left (ParseError 0 CharacterNotFound)
 parseChar _ [] = Left (ParseError 0 CharacterNotFound)
 
 parseAnyChar :: String -> Parser Char
 parseAnyChar (c:cs) (a:as)
     | c == a = Right (c, as)
     | otherwise = parseAnyChar cs (a:as)
-parseAnyChar _ _ = Left (ParseError 80 CharacterNotFound)
+parseAnyChar _ _ = Left (ParseError 0 CharacterNotFound)
 
 parseOr :: Parser a -> Parser a -> Parser a
 parseOr pa pb str = case pa str of

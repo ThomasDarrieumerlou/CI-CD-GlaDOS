@@ -58,11 +58,13 @@ test-suite glados-test
       AstTests
       CptToAst
       CptTests
+      Lexer
       Paths_glados
   hs-source-dirs:
       tests
       tests/ast
       tests/cpt
+      tests/parser
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       HUnit
