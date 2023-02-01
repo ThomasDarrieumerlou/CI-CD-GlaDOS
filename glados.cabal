@@ -27,6 +27,7 @@ library
       Ast
       Cpt
       Literal
+      Parser
   other-modules:
       Paths_glados
   hs-source-dirs:
