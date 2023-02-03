@@ -18,7 +18,7 @@ type Name = String
 
 type Params = [String]
 
-data Operator = Plus | Minus | Times | Div | Mod
+data Operator = Plus | Minus | Times | Div
     deriving (Show, Eq)
 
 data Ast
