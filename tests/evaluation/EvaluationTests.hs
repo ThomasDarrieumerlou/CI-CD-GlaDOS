@@ -36,7 +36,7 @@ callVariableTest = TestCase (assertEqual "For a simple variable call"
 callFunctionTest :: Test
 callFunctionTest = TestCase (assertEqual "For a simple function call"
     (Just (Value (Integer 7)))
-    (fst $ evalAst (Call "f" [3, 4]) (fromList [("f", (Function ["a", "b"]
+    (fst $ evalAst (Call "f" [(Value (Integer 3)), (Value (Integer 4))]) (fromList [("f", (Function ["a", "b"]
       (Operator Plus [(Call "a" []), (Call "b" [])]))
     )]))
   )
