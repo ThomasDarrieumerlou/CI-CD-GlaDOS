@@ -56,6 +56,7 @@ tests:
       - tests/ast
       - tests/cpt
       - tests/lexer
+      - tests/evaluation
     ghc-options:
       - -threaded
       - -rtsopts

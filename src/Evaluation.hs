@@ -5,7 +5,7 @@
 -- Evaluation.hs
 -}
 
-module Evaluation (evalAst) where
+module Evaluation (evalAst, Bindings) where
 
 import Ast (
     Operator (Plus, Minus, Times, Div), 
@@ -24,7 +24,7 @@ type Bindings = Map String Ast
 -- ---------------------------- Builtin operators --------------------------- --
 
 data BuiltinOperator a = BuiltinOperator {
-  function :: Integral a => a -> a -> a
+  function :: a -> a -> a
   , minArgs :: Int
   , neutral :: a
 }
@@ -47,23 +47,25 @@ extractValue :: Integral a => Ast -> Maybe a
 extractValue (Value (Integer i)) = Just $ fromIntegral i
 extractValue _ = Nothing
 
-processFunction :: Bindings -> [String] -> Ast -> Maybe Ast
-processFunction bs ps b = case b of
-  Call n as -> processCall bs n as
-  Operator op as -> Just (Value (Integer ((\o ->
-    fromJust $ processOperator o as bs) $ getOperator op)))
-  _ -> Nothing
+functionBindings :: Bindings -> [Ast] -> [String] -> Maybe Bindings
+functionBindings bs [] [] = Just bs
+functionBindings bs (a:as) (n:ns) = functionBindings (insert n a bs) as ns
+functionBindings _ _ _ = Nothing
+
+processFunction :: Bindings -> [Ast] -> [String] -> Ast -> Maybe Ast
+processFunction bs as ns body = functionBindings bs as ns >>= fst . (evalAst body)
 
 processCall :: Bindings -> String -> [Ast] -> Maybe Ast
 processCall bs n as = case lookup n bs of
-  Just (Function _ body) -> fst $ evalAst body bs
+  Just (Function ps body) -> processFunction bs as ps body
   Just (Value v) -> Just (Value v)
   _ -> Nothing
 
 evalAst :: Ast -> Bindings -> (Maybe Ast, Bindings)
 evalAst (Define n v) bs = (Nothing, insert n v bs)
 evalAst (Value v) bs = (Just (Value v), bs)
-evalAst (Function p a) bs = (processFunction bs p a , bs)
+--evalAst (Function p a) bs = (processFunction bs p a , bs)
 evalAst (Call n as) bs = (processCall bs n as, bs)
 evalAst (Operator op as) bs = (Just (Value (Integer ((\o ->
   fromJust $ processOperator o as bs) $ getOperator op))), bs)
+evalAst _ bs = (Nothing, bs)

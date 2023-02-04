@@ -12,6 +12,7 @@ import System.Exit (exitWith, exitSuccess, ExitCode (ExitFailure))
 import CptToAst (cptToAstTestList)
 import CptTests (cptTestList)
 import Lexer (lexerTestList)
+import EvaluationTests (evaluationTestList)
 
 main :: IO ()
 main = runTestTT ( test [
