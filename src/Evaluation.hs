@@ -8,7 +8,7 @@
 module Evaluation (evalAst, Bindings) where
 
 import Ast (
-    Operator (Plus, Minus, Times, Div), 
+    Operator (Plus, Minus, Times, Div),
     Ast (Define, Function, Value, Call, Operator)
   )
 import Literal (Literal (Integer))
@@ -40,21 +40,14 @@ getOperator Div = BuiltinOperator {function = div, minArgs = 1, neutral = 1}
 -- processOperator :: Integral a => BuiltinOperator a -> [Ast] -> Bindings -> Maybe a
 -- processOperator op as bs
 --   | length as < minArgs op = Nothing
---   | otherwise = Just (foldr (function op) (neutral op) 
+--   | otherwise = Just (foldr (function op) (neutral op)
 --     (fromJust (mapM (extractValue . fromJust . fst . (`evalAst` bs)) as)))
-
-isValue :: Ast -> Bool
-isValue (Value _) = True
-isValue _ = False
 
 processOperator :: Integral a => BuiltinOperator a -> [Ast] -> Bindings -> Maybe a
 processOperator op as bs
   | length as < minArgs op = Nothing
-  | all isValue as = Just (foldr (function op) (neutral op) 
+  | otherwise = Just (foldr (function op) (neutral op)
     (fromJust (mapM (extractValue . fromJust . fst . (`evalAst` bs)) as)))
-  | otherwise = Just (foldr (function op) (neutral op) 
-    (fromJust (mapM (extractValue . fromJust . fst . (`evalAst` bs)) 
-      (map (\a -> if isValue a then a else fromJust $ fst $ evalAst a bs) as))))
 
 extractValue :: Integral a => Ast -> Maybe a
 extractValue (Value (Integer i)) = Just $ fromIntegral i
@@ -66,7 +59,7 @@ functionBindings bs (a:as) (n:ns) = functionBindings (insert n a bs) as ns
 functionBindings _ _ _ = Nothing
 
 processFunction :: Bindings -> [Ast] -> [String] -> Ast -> Maybe Ast
-processFunction bs as ns body = functionBindings bs as ns >>= fst . (evalAst body)
+processFunction bs as ns body = functionBindings bs as ns >>= fst . evalAst body
 
 processCall :: Bindings -> String -> [Ast] -> Maybe Ast
 processCall bs n as = case lookup n bs of
@@ -77,8 +70,7 @@ processCall bs n as = case lookup n bs of
 evalAst :: Ast -> Bindings -> (Maybe Ast, Bindings)
 evalAst (Define n v) bs = (Nothing, insert n v bs)
 evalAst (Value v) bs = (Just (Value v), bs)
---evalAst (Function p a) bs = (processFunction bs p a , bs)
+evalAst (Function p a) bs = (Just (Function p a), bs)
 evalAst (Call n as) bs = (processCall bs n as, bs)
 evalAst (Operator op as) bs = (Just (Value (Integer ((\o ->
   fromJust $ processOperator o as bs) $ getOperator op))), bs)
-evalAst _ bs = (Nothing, bs)
