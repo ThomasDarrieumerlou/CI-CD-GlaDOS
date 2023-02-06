@@ -62,7 +62,6 @@ defineToAst _ = Nothing
 
 listToAst :: [Cpt] -> Maybe Ast
 listToAst (Symbol "define":ps) = defineToAst ps
-    -- cptToAst b >>= (Just . Define a)
 listToAst [Symbol "lambda", List ps, b] = listToParams ps >>= (\params ->
   cptToAst b >>= (Just . Function params))
 listToAst (Symbol s:ps) = case symbolToOperator s of
