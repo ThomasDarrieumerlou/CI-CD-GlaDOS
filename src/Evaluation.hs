@@ -37,11 +37,24 @@ getOperator Minus = BuiltinOperator {function = (-), minArgs = 0, neutral = 0}
 getOperator Times = BuiltinOperator {function = (*), minArgs = 1, neutral = 1}
 getOperator Div = BuiltinOperator {function = div, minArgs = 1, neutral = 1}
 
+-- processOperator :: Integral a => BuiltinOperator a -> [Ast] -> Bindings -> Maybe a
+-- processOperator op as bs
+--   | length as < minArgs op = Nothing
+--   | otherwise = Just (foldr (function op) (neutral op) 
+--     (fromJust (mapM (extractValue . fromJust . fst . (`evalAst` bs)) as)))
+
+isValue :: Ast -> Bool
+isValue (Value _) = True
+isValue _ = False
+
 processOperator :: Integral a => BuiltinOperator a -> [Ast] -> Bindings -> Maybe a
 processOperator op as bs
   | length as < minArgs op = Nothing
-  | otherwise = Just (foldr (function op) (neutral op) 
+  | all isValue as = Just (foldr (function op) (neutral op) 
     (fromJust (mapM (extractValue . fromJust . fst . (`evalAst` bs)) as)))
+  | otherwise = Just (foldr (function op) (neutral op) 
+    (fromJust (mapM (extractValue . fromJust . fst . (`evalAst` bs)) 
+      (map (\a -> if isValue a then a else fromJust $ fst $ evalAst a bs) as))))
 
 extractValue :: Integral a => Ast -> Maybe a
 extractValue (Value (Integer i)) = Just $ fromIntegral i
