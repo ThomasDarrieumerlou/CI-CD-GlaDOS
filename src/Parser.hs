@@ -1,68 +1,104 @@
-module Parser (
-    Parser, parseChar, parseAnyChar,
-    parseOr, parseAnd, parseAndWith,
-    parseMany, parseSome, parseUInt, parseInt,
-    ParseError (..), ParseErrorContent (..)) where
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use lambda-case" #-}
+module Parser (Parser, satisfy, pChar, pChars, pString, pWhitespace, parseOr, parseAnd, parseAndWith, parseMany, parseSome, pUInt, pInt, pParenthesis, pBool, parsePair, parseList) where
+import Control.Applicative ( Alternative(empty, (<|>), many, some) )
+import Data.List ( nub )
 
--- data ListError = ParenthesisNotClosed
---     | MissingComa
--- instance Show ListError where
---   show (ParethesisNotClose) = "Parenthesis is not closed"
+data ParseError = InvalidSynthax
+  | Unexpected
+  deriving (Show, Eq)
 
-type Pos = Int
+newtype Parser a = Parser {
+  runParser :: String ->  Either [ParseError] (a, String)
+}
 
-data ParseErrorContent = InvalidSymbol
-    | InvalidLiteral
-    | InvalidList -- ListError
-    | CharacterNotFound
-    deriving (Eq, Show)
+instance Functor Parser where
+  fmap :: (a -> b) -> Parser a -> Parser b
+  fmap f (Parser p) = Parser $ \input -> do
+    (output, rest) <- p input
+    pure (f output, rest)
 
-data ParseError = ParseError !Pos !ParseErrorContent
-    deriving (Eq, Show)
+instance Applicative Parser where
+  pure :: a -> Parser a
+  pure a = Parser $ \input -> Right (a, input)
 
-type Parser a = String -> Either ParseError (a, String)
+  (<*>) :: Parser (a -> b) -> Parser a -> Parser b
+  Parser f <*> Parser p = Parser $ \input -> do
+    (f', rest) <- f input
+    (output, rest') <- p rest
+    pure (f' output, rest')
 
+instance Monad Parser where
+  return :: a -> Parser a
+  return = pure
 
-parseChar :: Char -> Parser Char
-parseChar c (a:as)
-  | c == a = Right (c, as)
-  | otherwise = Left (ParseError 0 CharacterNotFound)
-parseChar _ [] = Left (ParseError 0 CharacterNotFound)
+  (>>=) :: Parser a -> (a -> Parser b) -> Parser b
+  Parser p >>= k = Parser $ \input -> do
+    (output, rest) <- p input
+    runParser (k output) rest
 
-parseAnyChar :: String -> Parser Char
-parseAnyChar (c:cs) (a:as)
-    | c == a = Right (c, as)
-    | otherwise = parseAnyChar cs (a:as)
-parseAnyChar _ _ = Left (ParseError 0 CharacterNotFound)
+instance Alternative Parser where
+  empty :: Parser a
+  empty = Parser $ \_ -> Left [InvalidSynthax]
+
+  (<|>) :: Parser a -> Parser a -> Parser a
+  Parser l <|> Parser r = Parser $ \input ->
+    case l input of
+      Left err ->
+        case r input of
+          Left err' -> Left $ nub $ err <> err'
+          Right (output, rest) -> Right (output, rest)
+      Right (output, rest) -> Right (output, rest)
+
+satisfy :: (Char -> Bool) -> Parser Char
+satisfy f = Parser $ \i ->
+  case i of 
+    [] -> Left [InvalidSynthax]
+    x:xs
+      | f x -> Right (x,xs)
+      | otherwise -> Left [InvalidSynthax]
+
+pChar :: Char -> Parser Char
+pChar h = satisfy (== h)
+
+pChars :: String -> Parser Char
+pChars s = satisfy (`elem` s)
+
+pString :: String -> Parser String
+pString = traverse pChar  
+
+pWhitespace :: Parser Char
+pWhitespace = satisfy (`elem` " \n\t") 
 
 parseOr :: Parser a -> Parser a -> Parser a
-parseOr pa pb str = case pa str of
-    Left _ -> pb str
-    Right s -> Right s
+parseOr a b = a <|> b
 
 parseAnd :: Parser a -> Parser b -> Parser (a, b)
-parseAnd pa pb str = pa str >>= (\(a, s) -> pb s >>=
-    (\(b, s2) -> Right ((a, b), s2)))
+parseAnd a b = (,) <$> a <*> b
 
-parseAndWith :: (a -> b -> c) -> Parser a -> Parser b -> Parser c
-parseAndWith f pa pb str = parseAnd pa pb str >>= (\((a, b), s) -> Right (f a b, s))
+parseAndWith :: ( a -> b -> c ) -> Parser a -> Parser b -> Parser c
+parseAndWith f a b = f <$> a <*> b
 
-parseMany :: Parser a -> Parser [a]
-parseMany pa str = case pa str of
-    Left _ -> Right ([], str)
-    Right (a, s) -> parseMany pa s >>= (\(as, s2) -> Right (a:as, s2))
+parseMany :: Parser a -> Parser [ a ]
+parseMany = many 
 
-parseSome :: Parser a -> Parser [a]
-parseSome pa str = parseAnd pa (parseMany pa) str >>=
-    (\((a, as), s) -> Right (a:as, s))
+parseSome :: Parser a -> Parser [ a ]
+parseSome = some
 
-parseUInt :: Parser Int
-parseUInt str = parseSome (parseAnyChar ['0'..'9']) str >>=
-    (\(as, s) -> Right (read as, s))
+pUInt :: Parser Int
+pUInt = read <$> some (pChars ['0'..'9'])
 
-parseInt :: Parser Int
-parseInt ('-':str) = parseUInt str >>= (\(nb, s) -> Right (-nb, s))
-parseInt ('+':str) = parseUInt str
-parseInt str = parseUInt str
+pInt :: Parser Int
+pInt = parseAndWith (*) (pChar '-' *> pure (-1)) pUInt
 
--- parsePair :: Parser a -> Parser (a, a)
+pParenthesis :: Parser a -> Parser a
+pParenthesis p = pChar '(' *> p <* pChar ')'
+
+pBool :: Parser Bool
+pBool = parseOr (pString "true" *> pure True) (pString "false" *> pure False)
+
+parsePair :: Parser a -> Parser (a, a)
+parsePair p = pParenthesis $ parseAndWith (,) p (pChar ',' *> p)
+
+parseList :: Parser a -> Parser [a]
+parseList p = pParenthesis $ parseAndWith (:) p (parseMany (pChar ',' *> p))
