@@ -6,6 +6,18 @@
 -}
 
 module Main (main) where
+import Lexer (pLisp)
+import System.Exit
+
+prompt :: IO ()
+prompt = putStr "> "
+
+launchCmd :: String -> IO ()
+launchCmd "quit" = exitSuccess 
+launchCmd str = prompt >> putStrLn str
+
+loop :: IO ()
+loop = getLine >>= \line -> launchCmd line >> loop
 
 main :: IO ()
-main = print "someFunc"
+main = loop 

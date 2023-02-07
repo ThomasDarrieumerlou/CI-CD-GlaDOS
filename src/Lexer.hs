@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 module Lexer (Parser, satisfy, pChar, pChars, pSymbol, pWhitespaces, pUInt, pInt, pParenthesis, pPair, pList, pInexact, pBool, pFloat, pLitteral, pAnySymbol, pCpt, pLisp) where
 import Control.Applicative ( Alternative(empty, (<|>), many, some) )
 import Data.List ( nub )
