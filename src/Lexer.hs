@@ -1,8 +1,9 @@
-module Lexer (Parser, satisfy, pChar, pChars, pSymbol, pWhitespace, pUInt, pInt, pParenthesis, pPair, pList, pInexact, pBool, pFloat, pLitteral, pAnySymbol, pCpt, pLisp) where
+module Lexer (Parser, satisfy, pChar, pChars, pSymbol, pWhitespaces, pUInt, pInt, pParenthesis, pPair, pList, pInexact, pBool, pFloat, pLitteral, pAnySymbol, pCpt, pLisp) where
 import Control.Applicative ( Alternative(empty, (<|>), many, some) )
 import Data.List ( nub )
 import Literal
 import Cpt
+import Control.Monad (void)
 
 data ParseError = InvalidSynthax
   | Unexpected
@@ -51,6 +52,8 @@ instance Alternative Parser where
           Right (output, rest) -> Right (output, rest)
       Right (output, rest) -> Right (output, rest)
 
+      
+
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy f = Parser $ \i ->
   case i of 
@@ -81,6 +84,9 @@ pUInt = read <$> some (pChars ['0'..'9'])
 pParenthesis :: Parser a -> Parser a
 pParenthesis p = pChar '(' *> p <* pChar ')'
 
+pWhitespaces :: Parser ()
+pWhitespaces = void $ some (satisfy (`elem` " \n\t")) 
+
 pPair :: Parser a -> Parser (a, a)
 pPair p = pParenthesis $ (,) <$> p <*> (pChar ',' *> p)
 
@@ -100,17 +106,14 @@ pLitteral :: Parser Literal
 pLitteral = (Boolean <$> pBool) <|> ((Floating <$> pFloat) <|> (Integer <$> pInt))
 
 pList :: Parser a -> Parser [a]
-pList p = pParenthesis $ (:) <$> p <*> many (pWhitespace *> p)
+pList p = pParenthesis $ (:) <$> p <*> many (pWhitespaces *> p)
 
 pSymbol :: String -> Parser String
 pSymbol = traverse pChar  
-
-pWhitespace :: Parser [Char]
-pWhitespace = some $ satisfy (`elem` " \n\t") 
 
 pCpt :: Parser Cpt
 pCpt = (Literal <$> pLitteral) <|> (Symbol <$> pAnySymbol) <|> (List <$> pList pCpt)
 
 pLisp :: Parser [Cpt]
-pLisp = some $ pCpt <* (pWhitespace <|> pEof)
+pLisp = some (pCpt <* (pWhitespaces <|> pEof)) <* pEof
 
