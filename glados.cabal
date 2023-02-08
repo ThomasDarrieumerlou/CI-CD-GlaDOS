@@ -59,7 +59,7 @@ test-suite glados-test
       AstTests
       CptToAst
       CptTests
-      Lexer
+      LexerTests
       EvaluationOperatorTests
       EvaluationTests
       LiteralTests
