@@ -6,18 +6,24 @@
 -}
 
 module Main (main) where
-import Lexer (pLisp)
-import System.Exit
+import Lexer (pLisp, runParser)
+import System.Exit ( exitSuccess )
+import Ast ( cptToAst )
 
-prompt :: IO ()
-prompt = putStr "> "
+interpreteInput :: String -> String
+interpreteInput str = case runParser pLisp str of
+  Left err -> show err
+  Right (cpt, _) -> show (cptToAst <$> cpt)
+
+prompt :: String
+prompt = "> "
 
 launchCmd :: String -> IO ()
 launchCmd "quit" = exitSuccess 
-launchCmd str = prompt >> putStrLn str
+launchCmd str = putStr prompt >> putStrLn (interpreteInput str)
 
 loop :: IO ()
 loop = getLine >>= \line -> launchCmd line >> loop
 
 main :: IO ()
-main = loop 
+main = loop
