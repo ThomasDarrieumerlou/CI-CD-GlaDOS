@@ -15,11 +15,9 @@ import Lexer (lexerTestList)
 import EvaluationOperatorTests (operatorTestList)
 import EvaluationTests (evaluationTestList)
 import LiteralTests (literalTestList)
+import AstTests (astTestList)
 
 main :: IO ()
 main = runTestTT ( test [
-    cptToAstTestList, cptTestList, evaluationTestList, operatorTestList, literalTestList,
-    lexerTestList
-  ]) >>= (\x -> if errors x + failures x == 0
-    then  exitSuccess
-    else exitWith (ExitFailure 84))
+    astTestList, cptToAstTestList, cptTestList, evaluationTestList, operatorTestList,
+    literalTestList, lexerTestList])
