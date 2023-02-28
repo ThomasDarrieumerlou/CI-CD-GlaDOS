@@ -33,6 +33,8 @@ library
       Evaluation
       LibParser.Literal
       LibParser.Parser
+      Operator
+      Stack
   other-modules:
       Paths_glados
   hs-source-dirs:

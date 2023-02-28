@@ -13,10 +13,10 @@ module Ast (
   Params,
 ) where
 
-import Cpt.Cpt (Cpt (..), getIdentifier)
-import Cpt.Literal (Literal (Expression))
-import Cpt.Operator (Operator (..))
-import Cpt.Keyword
+import Cpt (Cpt (..), Keyword (..), getIdentifier)
+import Stack (Stack (..), empty)
+import Literal (Literal (Expression))
+import Operator (Operator (..))
 
 type Name = String
 
@@ -32,11 +32,14 @@ data Ast
   deriving (Eq, Show)
 
 
+type OperatorStack = Stack Cpt
+
+
 listToParams :: [Cpt] -> Maybe Params
 listToParams = mapM getIdentifier
 
 listToArgs :: [Cpt] -> Maybe [Ast]
-listToArgs = mapM cptToAst
+listToArgs = mapM generateAst
 
 -- symbolToOperator :: String -> Maybe Operator
 -- symbolToOperator "+" = Just (Operator.Operator Plus 1)
@@ -52,23 +55,33 @@ keywordToAst :: Keyword -> Maybe Ast
 keywordToAst _ = Nothing
 
 -- defineToAst :: [Cpt] -> Maybe Ast
--- defineToAst [Identifier a, b] = cptToAst b >>= (Just . Define a)
+-- defineToAst [Identifier a, b] = generateAst b >>= (Just . Define a)
 -- defineToAst [List (Identifier n:ps), b] = listToParams ps >>=
---     (\params -> cptToAst b >>= (Just . Function params)) >>= (Just . Define n)
+--     (\params -> generateAst b >>= (Just . Function params)) >>= (Just . Define n)
 -- defineToAst _ = Nothing
 
 listToAst :: [Cpt] -> Maybe Ast
--- listToAst [Keyword Lambda, Cpt.Literal.Expression ps, b] = listToParams ps >>= (\params ->
-  -- cptToAst b >>= (Just . Ast.Lambda params))
+listToAst [Keyword Cpt.Lambda, List ps, b] = listToParams ps >>= (\params ->
+  generateAst b >>= (Just . Ast.Lambda params))
 listToAst (Identifier s:ps) = listToArgs ps >>= (Just . Call s)
 -- listToAst _ = Nothing
 
 operatorToAst :: Operator -> Maybe Ast
 operatorToAst _ = Nothing
 
+
+reversePolishCpt :: Cpt -> OperatorStack -> Cpt
+reversePolishCpt (List l) s = List l
+reversePolishCpt cpt s = cpt
+
+
+generateAst :: Cpt -> Maybe Ast
+generateAst (Literal i) = Just (Value i)
+generateAst (Identifier s) = symbolToAst s
+generateAst (List l) = listToAst l
+generateAst (Keyword k) = keywordToAst k
+generateAst (Cpt.Operator o) = operatorToAst o
+
+
 cptToAst :: Cpt -> Maybe Ast
-cptToAst (Literal i) = Just (Value i)
-cptToAst (Identifier s) = symbolToAst s
--- cptToAst (Expression l) = listToAst l
-cptToAst (Keyword k) = keywordToAst k
---cptToAst (Cpt.Operator.Operator o) = operatorToAst o
+cptToAst cpt = generateAst $ reversePolishCpt cpt empty
