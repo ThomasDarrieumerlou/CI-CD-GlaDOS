@@ -49,7 +49,7 @@ instance Monad Parser where
 
   (>>=) :: Parser a -> (a -> Parser b) -> Parser b
   Parser p >>= k = Parser $ \input -> do
-    (output, rest) <- p input 
+    (output, rest) <- p input
     runParser (k output) rest
 
 instance Alternative Parser where
@@ -95,7 +95,7 @@ pString :: String -> Parser String
 pString = traverse pChar
 
 pStrings :: [String] -> Parser String
-pStrings = foldr1 (<|>) . fmap pString 
+pStrings = foldr1 (<|>) . fmap pString
 
 pWhitespace :: Parser ()
 pWhitespace = void $ satisfy (`elem` " \t")
@@ -113,7 +113,7 @@ pAnySymbol :: Parser String
 pAnySymbol = some $ pChars (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])
 
 pParenthesis :: Parser a -> Parser a
-pParenthesis = pEncloseBySpecificParser (void $ pChar '(') (void $ pChar ')') 
+pParenthesis = pEncloseBySpecificParser (void $ pChar '(') (void $ pChar ')')
 
 pEncloseBySpecificParser :: Parser () -> Parser () -> Parser a -> Parser a
 pEncloseBySpecificParser pIn pOut p = pIn *> p <* pOut
@@ -122,10 +122,10 @@ pEncloseByParser :: Parser () -> Parser a -> Parser a
 pEncloseByParser pEnclose  = pEncloseBySpecificParser pEnclose pEnclose
 
 pSymbol :: String -> Parser String
-pSymbol str = pEncloseByParser pSomeWhitespace (pString str) 
+pSymbol str = pEncloseByParser pSomeWhitespace (pString str)
 
 pSymbols :: [String] -> Parser String
-pSymbols = foldr1 (<|>) . fmap pSymbol 
+pSymbols = foldr1 (<|>) . fmap pSymbol
 
 pComment :: Parser ()
 pComment = void $ pString "--" *> many (satisfy (/= '\n')) <* (void (pChar '\n') <|> pEof)
