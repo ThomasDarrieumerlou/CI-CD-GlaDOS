@@ -18,7 +18,14 @@ data OperatorType
   | Mod
   deriving (Show, Eq, Read)
 
-data Operator = Operator OperatorType Priority Associativity deriving (Eq, Show, Read)
+data Operator = Operator OperatorType Priority Associativity deriving (Eq, Read)
+
+instance Show Operator where
+  show (Operator Plus _ _) = "+"
+  show (Operator Minus _ _) = "-"
+  show (Operator Times _ _) = "*"
+  show (Operator Div _ _) = "/"
+  show (Operator Mod _ _) = "%"
 
 operators :: [String]
 operators = [".", "+", "-", "*", "/", "`function`", "::", "->", "=", "$"]

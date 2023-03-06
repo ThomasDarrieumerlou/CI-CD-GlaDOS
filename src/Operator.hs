@@ -1,4 +1,12 @@
+{-
+-- EPITECH PROJECT, 2023
+-- glados
+-- File description:
+-- Operator.hs
+-}
+
 module Operator (Operator (..), OperatorType (..)) where
+
 import GHC.Generics (Associativity)
 
 type Precedence = Int

@@ -4,13 +4,12 @@
 -- File description:
 -- Ast.hs
 -}
-{-# LANGUAGE LambdaCase #-}
 
 module Ast (
   Ast (Define, Value, Lambda, Call, Operator),
   cptToAst,
   listToParams,
-  listToAst,
+  expressionToAst,
   shuntingYard,
   Params,
 ) where
@@ -19,6 +18,9 @@ import Cpt.Cpt (Cpt (..), getIdentifier)
 import Cpt.Keyword (Keyword (..))
 import Cpt.Literal (Literal (..))
 import Cpt.Operator (Operator (..))
+import Error (AstError (..), GladosError (..))
+
+import GHC.Generics (Associativity (..))
 
 type Name = String
 
@@ -34,58 +36,77 @@ data Ast
   deriving (Eq, Show)
 
 
-
-listToParams :: [Cpt] -> Maybe Params
+listToParams :: [Cpt] -> Either [GladosError] Params
 listToParams = mapM getIdentifier
 
-listToArgs :: [Cpt] -> Maybe [Ast]
-listToArgs = mapM generateAst
+listToArgs :: [Cpt] -> Either [GladosError] [Ast]
+listToArgs = mapM cptToAst
 
-symbolToAst :: String -> Maybe Ast
-symbolToAst s = Just (Call s [])
+symbolToAst :: String -> Either [GladosError] Ast
+symbolToAst s = Right (Call s [])
 
-keywordToAst :: Keyword -> Maybe Ast
-keywordToAst _ = Nothing
+keywordToAst :: Keyword -> Either [GladosError] Ast
+keywordToAst _ = Left [Ast InvalidAst]
 
 -- defineToAst :: [Cpt] -> Maybe Ast
--- defineToAst [Identifier a, b] = generateAst b >>= (Just . Define a)
+-- defineToAst [Identifier a, b] = cptToAst b >>= (Just . Define a)
 -- defineToAst [List (Identifier n:ps), b] = listToParams ps >>=
---     (\params -> generateAst b >>= (Just . Function params)) >>= (Just . Define n)
+--     (\params -> cptToAst b >>= (Just . Function params)) >>= (Just . Define n)
 -- defineToAst _ = Nothing
 
-listToAst :: [Cpt] -> Maybe Ast
-listToAst [Keyword Cpt.Keyword.Lambda, Cpt.Cpt.Expression ps, b] = listToParams ps >>= (\params ->
-  generateAst b >>= (Just . Ast.Lambda params))
-listToAst (Identifier s:ps) = listToArgs ps >>= (Just . Call s)
--- listToAst _ = Nothing
+expressionToAst :: [Cpt] -> Either [GladosError] Ast
+expressionToAst [Keyword Cpt.Keyword.Lambda, Cpt.Cpt.Expression ps, b] = listToParams ps >>= (\params ->
+  cptToAst b >>= (Right . Ast.Lambda params))
+expressionToAst (Identifier s:ps) = listToArgs ps >>= (Right . Call s)
+expressionToAst _ = Left [Ast NotImplemented]
 
-operatorToAst :: Operator -> Maybe Ast
-operatorToAst _ = Nothing
+operationToAst :: [Cpt] -> Either [GladosError] Ast
+operationToAst _ = Left [Ast NotImplemented]
+
+operatorToAst :: Operator -> Either [GladosError] Ast
+operatorToAst _ = Left [Ast InvalidAst]
 
 precedence :: Cpt -> Int
 precedence (Cpt.Cpt.Operator (Cpt.Operator.Operator _ p _)) = p
 precedence _ = 0
 
-shuntingYard :: Cpt -> Maybe Cpt
-shuntingYard (Cpt.Cpt.Expression l) = Cpt.Cpt.Expression <$> shuntingYard' [] [] l where
-  shuntingYard' :: [Cpt] -> [Cpt] -> [Cpt] -> Maybe [Cpt]
-  shuntingYard' out ops [] = Just $ out ++ ops
-  shuntingYard' out ops ((Cpt.Cpt.Literal v):ts) = shuntingYard' (out ++ [Cpt.Cpt.Literal v]) ops ts
-  shuntingYard' out ops ((Cpt.Cpt.Expression ls):ts) = shuntingYard (Cpt.Cpt.Expression ls) >>= (\case
-    (Cpt.Cpt.Expression xs) -> shuntingYard' (out ++ reverse xs) ops ts
-    cpt -> shuntingYard' (out ++ [cpt]) ops ts)
-  shuntingYard' out ops (op:ts) = shuntingYard' newOut newOps ts where
-    (topOps, restOps) = span (\c -> precedence c >= precedence op) ops
-    newOut = out ++ reverse topOps
-    newOps = op : restOps
-shuntingYard cpt = Just cpt
+associativity :: Cpt -> Associativity
+associativity (Cpt.Cpt.Operator (Cpt.Operator.Operator _ _ a)) = a
+associativity _ = LeftAssociative
 
-generateAst :: Cpt -> Maybe Ast
-generateAst (Literal i) = Just (Value i)
-generateAst (Identifier s) = symbolToAst s
-generateAst (Cpt.Cpt.Expression l) = listToAst l
-generateAst (Keyword k) = keywordToAst k
-generateAst (Cpt.Cpt.Operator o) = operatorToAst o
+-- ioShuntingYard' :: [Cpt] -> [Cpt] -> [Cpt] -> IO (Either [GladosError] [Cpt])
+-- ioShuntingYard' out ops [] = return $ Right $ out ++ ops -- End of input
+-- ioShuntingYard' out ops ((Cpt.Cpt.Literal v):ts) = ioShuntingYard' (out ++ [Cpt.Cpt.Literal v]) ops ts -- Literal
+-- ioShuntingYard' out ops ((Cpt.Cpt.Operation ls):ts) = print ops >> ioShuntingYard' [] [] ls -- Parenthesis
+--   >>= (\(Right xs) -> ioShuntingYard' (out ++ xs) ops ts)
+-- ioShuntingYard' out ops (op:ts) = print ops >> ioShuntingYard' newOut newOps ts where -- Operator and Identifier handling
+--   (topOps, restOps) = span (\c -> precedence c > precedence op ||
+--     (precedence c == precedence op && associativity c == LeftAssociative)) ops
+--   newOut = out ++ topOps
+--   newOps = op : restOps
 
-cptToAst :: Cpt -> Maybe Ast
-cptToAst cpt = shuntingYard cpt >>= generateAst
+shuntingYard' :: [Cpt] -> [Cpt] -> [Cpt] -> Either [GladosError] [Cpt]
+shuntingYard' out ops [] = Right $ out ++ ops -- End of input
+shuntingYard' out ops ((Cpt.Cpt.Literal v):ts) = shuntingYard' (out ++ [Cpt.Cpt.Literal v]) ops ts -- Literal
+shuntingYard' out ops ((Cpt.Cpt.Operation ls):ts) = shuntingYard' [] [] ls -- Parenthesis
+  >>= (\xs -> shuntingYard' (out ++ xs) ops ts)
+shuntingYard' out ops (op:ts) = shuntingYard' newOut newOps ts where -- Operator and Identifier handling
+  (topOps, restOps) = span (\c -> precedence c > precedence op ||
+    (precedence c == precedence op && associativity c == LeftAssociative)) ops
+  newOut = out ++ topOps
+  newOps = op : restOps
+
+shuntingYard :: [Cpt] -> Either [GladosError] [Cpt]
+shuntingYard = shuntingYard' [] []
+
+cptToAst :: Cpt -> Either [GladosError] Ast
+cptToAst (Cpt.Cpt.Literal i) = Right (Value i)
+cptToAst (Cpt.Cpt.Operation o) = shuntingYard o >>= operationToAst
+cptToAst (Cpt.Cpt.Identifier s) = symbolToAst s
+cptToAst (Cpt.Cpt.Expression l) = expressionToAst l
+cptToAst (Cpt.Cpt.Keyword k) = keywordToAst k
+cptToAst (Cpt.Cpt.Operator o) = operatorToAst o
+cptToAst (Cpt.Cpt.Prototype _) = Left [Ast NotImplemented]
+cptToAst (Cpt.Cpt.Assignement _) = Left [Ast NotImplemented]
+cptToAst (Cpt.Cpt.Condition _) = Left [Ast NotImplemented]
+cptToAst (Cpt.Cpt.Lambda _) = Left [Ast NotImplemented]

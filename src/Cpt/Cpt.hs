@@ -7,12 +7,14 @@
 
 module Cpt.Cpt (
     Cpt (..),
+    Operation,
     getIdentifier, getKeyword, getLiteral, getList, getOperator
   ) where
 
 import Cpt.Literal (Literal)
 import Cpt.Operator (Operator)
 import Cpt.Keyword (Keyword)
+import Error (GladosError (Cpt), CptError (InvalidCpt))
 
 type Identifier = String
 type Expression = [Cpt]
@@ -35,39 +37,40 @@ data Cpt
   | Lambda Lambda
   deriving (Eq)
 
+
 instance Show Cpt where
   show (Literal l) = show l
   show (Identifier s) = s
   show (Keyword k) = show k
   show (Operator o) = show o
-  show (Expression (l:ls)) = foldl (\x acc -> x ++ " " ++ acc) (show l) (map show ls)
+  show (Expression (l:ls)) = "Expression " ++ foldl (\x acc -> x ++ " " ++ acc) (show l) (map show ls)
   show (Expression []) = "empty Cpt"
   show (Condition (a, b, c)) = "if " ++ show a ++ " then " ++ show b ++ " else " ++ show c
-  show (Operation (l:ls)) = foldl (\x acc -> x ++ " " ++ acc) (show l) (map show ls)
+  show (Operation (l:ls)) = "Operation " ++ foldl (\x acc -> x ++ " " ++ acc) (show l) (map show ls)
   show (Operation []) = "empty Cpt"
   show (Assignement (s, l, c)) = s ++ " " ++ show l ++ " = " ++ show c
   show (Prototype (s, l)) = s ++ " " ++ show l
   show (Lambda l) = "lambda " ++ show l
 
-getIdentifier :: Cpt -> Maybe String
-getIdentifier (Identifier s) = Just s
-getIdentifier _ = Nothing
+getIdentifier :: Cpt -> Either [GladosError] String
+getIdentifier (Identifier s) = Right s
+getIdentifier _ = Left [Cpt InvalidCpt]
 
-getLiteral :: Cpt -> Maybe Literal
-getLiteral (Literal x) = Just x
-getLiteral _ = Nothing
+getLiteral :: Cpt -> Either [GladosError] Literal
+getLiteral (Literal x) = Right x
+getLiteral _ = Left [Cpt InvalidCpt]
 
-getKeyword :: Cpt -> Maybe Keyword
-getKeyword (Keyword k) = Just k
-getKeyword _ = Nothing
+getKeyword :: Cpt -> Either [GladosError] Keyword
+getKeyword (Keyword k) = Right k
+getKeyword _ = Left [Cpt InvalidCpt]
 
-getOperator :: Cpt -> Maybe Operator
-getOperator (Operator o) = Just o
-getOperator _ = Nothing
+getOperator :: Cpt -> Either [GladosError] Operator
+getOperator (Operator o) = Right o
+getOperator _ = Left [Cpt InvalidCpt]
 
-getList :: Cpt -> Maybe [Cpt]
-getList (Expression l) = Just l
-getList _ = Nothing
+getList :: Cpt -> Either [GladosError] [Cpt]
+getList (Expression l) = Right l
+getList _ = Left [Cpt InvalidCpt]
 
 -- Faire une fonction qui crée l'abre correspondant à une expression en
 -- ajoutant les priorités.
