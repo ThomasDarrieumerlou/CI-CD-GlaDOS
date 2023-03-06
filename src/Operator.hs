@@ -8,6 +8,16 @@ data OperatorType
   | Times
   | Div
   | Mod
-  deriving (Show, Eq)
+  deriving (Eq)
 
-data Operator = Operator OperatorType Precedence Associativity deriving (Eq, Show)
+instance Show OperatorType where
+  show Plus = "+"
+  show Minus = "-"
+  show Times = "*"
+  show Div = "/"
+  show Mod = "%"
+
+data Operator = Operator OperatorType Precedence Associativity deriving (Eq)
+
+instance Show Operator where
+  show (Operator o _ _) = show o

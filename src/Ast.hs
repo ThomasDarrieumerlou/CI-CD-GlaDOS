@@ -4,19 +4,21 @@
 -- File description:
 -- Ast.hs
 -}
+{-# LANGUAGE LambdaCase #-}
 
 module Ast (
   Ast (Define, Value, Lambda, Call, Operator),
   cptToAst,
   listToParams,
   listToAst,
+  shuntingYard,
   Params,
 ) where
 
-import Cpt (Cpt (..), Keyword (..), getIdentifier)
-import Stack (Stack (..), empty)
-import Literal (Literal (Expression))
-import Operator (Operator (..))
+import Cpt.Cpt (Cpt (..), getIdentifier)
+import Cpt.Keyword (Keyword (..))
+import Cpt.Literal (Literal (..))
+import Cpt.Operator (Operator (..))
 
 type Name = String
 
@@ -32,21 +34,12 @@ data Ast
   deriving (Eq, Show)
 
 
-type OperatorStack = Stack Cpt
-
 
 listToParams :: [Cpt] -> Maybe Params
 listToParams = mapM getIdentifier
 
 listToArgs :: [Cpt] -> Maybe [Ast]
 listToArgs = mapM generateAst
-
--- symbolToOperator :: String -> Maybe Operator
--- symbolToOperator "+" = Just (Operator.Operator Plus 1)
--- symbolToOperator "-" = Just (Operator.Operator Minus 1)
--- symbolToOperator "*" = Just (Operator.Operator Times 2)
--- symbolToOperator "/" = Just (Operator.Operator Div 2)
--- symbolToOperator _ = Nothing
 
 symbolToAst :: String -> Maybe Ast
 symbolToAst s = Just (Call s [])
@@ -61,7 +54,7 @@ keywordToAst _ = Nothing
 -- defineToAst _ = Nothing
 
 listToAst :: [Cpt] -> Maybe Ast
-listToAst [Keyword Cpt.Lambda, List ps, b] = listToParams ps >>= (\params ->
+listToAst [Keyword Cpt.Keyword.Lambda, Cpt.Cpt.Expression ps, b] = listToParams ps >>= (\params ->
   generateAst b >>= (Just . Ast.Lambda params))
 listToAst (Identifier s:ps) = listToArgs ps >>= (Just . Call s)
 -- listToAst _ = Nothing
@@ -69,19 +62,30 @@ listToAst (Identifier s:ps) = listToArgs ps >>= (Just . Call s)
 operatorToAst :: Operator -> Maybe Ast
 operatorToAst _ = Nothing
 
+precedence :: Cpt -> Int
+precedence (Cpt.Cpt.Operator (Cpt.Operator.Operator _ p _)) = p
+precedence _ = 0
 
-reversePolishCpt :: Cpt -> OperatorStack -> Cpt
-reversePolishCpt (List l) s = List l
-reversePolishCpt cpt s = cpt
-
+shuntingYard :: Cpt -> Maybe Cpt
+shuntingYard (Cpt.Cpt.Expression l) = Cpt.Cpt.Expression <$> shuntingYard' [] [] l where
+  shuntingYard' :: [Cpt] -> [Cpt] -> [Cpt] -> Maybe [Cpt]
+  shuntingYard' out ops [] = Just $ out ++ ops
+  shuntingYard' out ops ((Cpt.Cpt.Literal v):ts) = shuntingYard' (out ++ [Cpt.Cpt.Literal v]) ops ts
+  shuntingYard' out ops ((Cpt.Cpt.Expression ls):ts) = shuntingYard (Cpt.Cpt.Expression ls) >>= (\case
+    (Cpt.Cpt.Expression xs) -> shuntingYard' (out ++ reverse xs) ops ts
+    cpt -> shuntingYard' (out ++ [cpt]) ops ts)
+  shuntingYard' out ops (op:ts) = shuntingYard' newOut newOps ts where
+    (topOps, restOps) = span (\c -> precedence c >= precedence op) ops
+    newOut = out ++ reverse topOps
+    newOps = op : restOps
+shuntingYard cpt = Just cpt
 
 generateAst :: Cpt -> Maybe Ast
 generateAst (Literal i) = Just (Value i)
 generateAst (Identifier s) = symbolToAst s
-generateAst (List l) = listToAst l
+generateAst (Cpt.Cpt.Expression l) = listToAst l
 generateAst (Keyword k) = keywordToAst k
-generateAst (Cpt.Operator o) = operatorToAst o
-
+generateAst (Cpt.Cpt.Operator o) = operatorToAst o
 
 cptToAst :: Cpt -> Maybe Ast
-cptToAst cpt = generateAst $ reversePolishCpt cpt empty
+cptToAst cpt = shuntingYard cpt >>= generateAst
