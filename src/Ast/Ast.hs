@@ -6,19 +6,31 @@
 -}
 
 module Ast.Ast (
-  Ast (Define, Value, Lambda, Call, Operator),
+  Ast (Define, Value, Lambda, Call, Operation, Condition),
   cptToAst,
+  operationToAst,
   listToParams,
-  expressionToAst,
   Params,
 ) where
 
 import Ast.ShuntingYard (shuntingYard)
-import Cpt.Cpt (Cpt (..), getIdentifier)
-import Cpt.Keyword (Keyword (..))
+import Cpt.Cpt (
+  Cpt (..),
+  Assignement,
+  getIdentifier,
+  Condition,
+  Expression,
+  Operation,
+  Lambda
+  )
 import Cpt.Literal (Literal (..))
 import Cpt.Operator (Operator (..))
-import Error (GlobalError (..), CptError (..), GladosError (..), CptErrorReason (InvalidCptNotTreatable))
+import Error (
+  GlobalWarning (..),
+  CptError (..),
+  GladosError (..),
+  CptErrorReason (InvalidCptNotTreatable)
+  )
 
 
 -- -------------------------------- Typedefs -------------------------------- --
@@ -31,53 +43,61 @@ data Ast
   = Define Name Ast             -- Define a new variable or function
   | Value Literal               -- Value, either Bool, Int, Fraction or Float
   | Lambda Params Ast           -- Takes Args and Body
-  | Call Name [Ast]             -- Look for name in bindings and pass args if needed
-  | Operator Operator [Ast]     -- Basic operators with its parameters
+  | Call Name [Ast]             -- Look for name in bindings and pass args
+  | Operation Operator [Ast]    -- Basic operators with its parameters
+  | Condition Ast Ast Ast       -- Condition, then, else
   deriving (Eq, Show)
 
 
 -- ------------------------ Ast generation functions ------------------------ --
 
-
-operatorToAst :: Operator -> Either [GladosError] Ast
-operatorToAst o = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show o]
-
-keywordToAst :: Keyword -> Either [GladosError] Ast
-keywordToAst k = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show k]
-
 listToParams :: [Cpt] -> Either [GladosError] Params
 listToParams = mapM getIdentifier
 
-listToArgs :: [Cpt] -> Either [GladosError] [Ast]
-listToArgs = mapM cptToAst
+splitOperatorParams :: Operator -> [Ast] -> Either [GladosError] [Ast]
+splitOperatorParams op (p1:p2:rest) = Right $ Ast.Ast.Operation op [p2, p1] : rest
+splitOperatorParams op _ = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $
+  "Invalid operation: " ++ show op ++ " missing parameters"]
 
-identifierToAst :: String -> Either [GladosError] Ast
-identifierToAst s = Right (Call s [])
+operationToAst :: Operation -> Either [GladosError] [Ast]
+operationToAst [] = Right []
+operationToAst (Cpt.Cpt.Operator op:rest) = operationToAst rest >>=
+  splitOperatorParams op
+operationToAst (Cpt.Cpt.Literal l:rest) = operationToAst rest >>=
+  (\next -> Right (Ast.Ast.Value l : next))
+operationToAst (Cpt.Cpt.Identifier i:rest) = operationToAst rest >>=
+  (\params -> Right [Ast.Ast.Call i (reverse params)])
+operationToAst (Cpt.Cpt.Expression expr:_) = expressionToAst expr >>=
+  Right . (:[])
+operationToAst c = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show c]
 
+conditionToAst :: Condition -> Either [GladosError] Ast
+conditionToAst (c, t, e) = cptToAst c >>= (\cond ->
+  cptToAst t >>= (\then' ->
+    cptToAst e >>= (Right . Ast.Ast.Condition cond then')))
 
--- defineToAst :: [Cpt] -> Maybe Ast
--- defineToAst [Identifier a, b] = cptToAst b >>= (Just . Define a)
--- defineToAst [List (Identifier n:ps), b] = listToParams ps >>=
---     (\params -> cptToAst b >>= (Just . Function params)) >>= (Just . Define n)
--- defineToAst _ = Nothing
+lambdaToAst :: Lambda -> Either [GladosError] Ast
+lambdaToAst _ = Left [Warning $ NotImplemented "lambdas"]
+  -- listToParams ps >>= (\params ->
+  -- cptToAst b >>= (Right . Ast.Ast.Lambda params))
 
-expressionToAst :: [Cpt] -> Either [GladosError] Ast
-expressionToAst [Keyword Cpt.Keyword.Lambda, Cpt.Cpt.Expression ps, b] = listToParams ps >>= (\params ->
-  cptToAst b >>= (Right . Ast.Ast.Lambda params))
-expressionToAst (Identifier s:ps) = listToArgs ps >>= (Right . Call s)
-expressionToAst e = Left [Global $ NotImplemented $ show e]
+expressionToAst :: Expression -> Either [GladosError] Ast
+expressionToAst [Cpt.Cpt.Operation o] = shuntingYard o >>= (\x ->
+  case (operationToAst . reverse) x of
+  (Right [ast]) -> Right ast
+  (Right _) -> Left [Cpt $ InvalidCpt InvalidCptNotTreatable $
+    "invalid operation: " ++ show o]
+  (Left err) -> Left err)
+expressionToAst [Cpt.Cpt.Condition c] = conditionToAst c
+expressionToAst [Cpt.Cpt.Lambda l] = lambdaToAst l
+expressionToAst _ = Left [Warning $ NotImplemented "conditions"]
 
-operationToAst :: [Cpt] -> Either [GladosError] Ast
-operationToAst o = Left [Global $ NotImplemented $ show o]
+assignementToAst :: Assignement -> Either [GladosError] Ast
+assignementToAst (s, l, Cpt.Cpt.Expression expr) = listToParams l >>=
+  (\args -> expressionToAst expr >>= (Right . Define s . Ast.Ast.Lambda args))
+assignementToAst c = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show c]
 
 cptToAst :: Cpt -> Either [GladosError] Ast
-cptToAst (Cpt.Cpt.Literal i) = Right (Value i)
-cptToAst (Cpt.Cpt.Operation o) = shuntingYard o >>= operationToAst
-cptToAst (Cpt.Cpt.Identifier s) = identifierToAst s
-cptToAst (Cpt.Cpt.Expression l) = expressionToAst l
-cptToAst (Cpt.Cpt.Keyword k) = keywordToAst k
-cptToAst (Cpt.Cpt.Operator o) = operatorToAst o
-cptToAst (Cpt.Cpt.Prototype _) = Left [Global $ NotImplemented "function prototypes"]
-cptToAst (Cpt.Cpt.Assignement _) = Left [Global $ NotImplemented "assignements"]
-cptToAst (Cpt.Cpt.Condition _) = Left [Global $ NotImplemented "conditions"]
-cptToAst (Cpt.Cpt.Lambda _) = Left [Global $ NotImplemented "lambdas"]
+cptToAst (Cpt.Cpt.Prototype _) = Left [Warning $ NotImplemented "function prototypes"]
+cptToAst (Cpt.Cpt.Assignement c) = assignementToAst c
+cptToAst c = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show c]

@@ -11,7 +11,7 @@ module Error (
   CptError (..),
   CptErrorReason (..),
   GladosError (..),
-  GlobalError (..),
+  GlobalWarning (..),
   ParseError (..)
   ) where
 
@@ -23,7 +23,7 @@ data AstErrorReason
   deriving (Eq)
 
 instance Show AstErrorReason where
-  show InvalidAstReason = "This is the reason"
+  show InvalidAstReason = "this is the reason"
 
 
 data AstError
@@ -31,7 +31,7 @@ data AstError
   deriving (Eq)
 
 instance Show AstError where
-  show (InvalidAst r s) = "Invalid usage of " ++ s ++ ": " ++ show r
+  show (InvalidAst r s) = "invalid usage of " ++ s ++ ": " ++ show r
 
 
 -- ------------------------------- Cpt errors ------------------------------- --
@@ -46,19 +46,19 @@ data CptErrorReason
   deriving (Eq)
 
 instance Show CptErrorReason where
-  show InvalidCptNotExpression = "Not an expression"
-  show InvalidCptNotIdentifier = "Not an identifier"
-  show InvalidCptNotLiteral = "Not a literal"
-  show InvalidCptNotKeyword = "Not a keyword"
-  show InvalidCptNotOperator = "Not an operator"
-  show InvalidCptNotTreatable = "Should be an expression, assignment, prototype or operation"
+  show InvalidCptNotExpression = "not an expression"
+  show InvalidCptNotIdentifier = "not an identifier"
+  show InvalidCptNotLiteral = "not a literal"
+  show InvalidCptNotKeyword = "not a keyword"
+  show InvalidCptNotOperator = "not an operator"
+  show InvalidCptNotTreatable = "should be an expression, assignment, prototype or operation"
 
 
 data CptError = InvalidCpt CptErrorReason String
   deriving (Eq)
 
 instance Show CptError where
-  show (InvalidCpt r s) = "Parse error on input: " ++ s ++ ": " ++ show r
+  show (InvalidCpt r s) = "parse error on input: " ++ s ++ ": " ++ show r
 
 
 -- ------------------------------ Parse errors ------------------------------ --
@@ -71,16 +71,16 @@ data ParseError = InvalidSynthax
 
 -- ------------------------------ Global errors ----------------------------- --
 
-newtype GlobalError = NotImplemented String
+newtype GlobalWarning = NotImplemented String
   deriving (Eq)
 
-instance Show GlobalError where
-  show (NotImplemented s) = "Not implemented: " ++ s
+instance Show GlobalWarning where
+  show (NotImplemented s) = "not implemented: " ++ s
 
 
 data GladosError
   = Cpt CptError
   | Ast AstError
   | Parser ParseError
-  | Global GlobalError
+  | Warning GlobalWarning
   deriving (Eq, Show)
