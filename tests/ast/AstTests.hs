@@ -2,7 +2,7 @@ module AstTests (astTestList) where
 
 import Test.HUnit
 
-import Ast (
+import Ast.Ast (
     listToParams, Params, expressionToAst
     )
 import Cpt.Cpt (
@@ -30,7 +30,7 @@ listToParamsFullIdentifiers = TestCase (assertEqual "For listToParams [a, b]"
 
 listToParamsNotFullIdentifiers :: Test
 listToParamsNotFullIdentifiers  = TestCase (assertEqual "For listToParams [1, b]"
-    (Left [Ast InvalidAst])
+    (Left [Cpt $ InvalidCpt $ "Not an identifier " ++ show (Literal (Int 1))])
     (listToParams [Literal (Int 1), Identifier "b"])
     )
 
@@ -40,6 +40,6 @@ listToParamsNotFullIdentifiers  = TestCase (assertEqual "For listToParams [1, b]
 
 listToAstInteger :: Test
 listToAstInteger = TestCase (assertEqual "For listToAst Integer"
-    (Left [Ast InvalidAst])
+    (Left [Cpt $ InvalidCpt])
     (expressionToAst [Literal (Int 1), Identifier "b"])
     )

@@ -18,13 +18,14 @@ import Cpt.Cpt (Cpt (..), getIdentifier)
 import Cpt.Keyword (Keyword (..))
 import Cpt.Literal (Literal (..))
 import Cpt.Operator (Operator (..))
-import Error (AstError (..), CptError (..), GladosError (..))
+import Error (GlobalError (..), CptError (..), GladosError (..), CptErrorReason (InvalidCptNotTreatable))
 
+
+-- -------------------------------- Typedefs -------------------------------- --
 
 type Name = String
 
 type Params = [String]
-
 
 data Ast
   = Define Name Ast             -- Define a new variable or function
@@ -35,6 +36,15 @@ data Ast
   deriving (Eq, Show)
 
 
+-- ------------------------ Ast generation functions ------------------------ --
+
+
+operatorToAst :: Operator -> Either [GladosError] Ast
+operatorToAst o = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show o]
+
+keywordToAst :: Keyword -> Either [GladosError] Ast
+keywordToAst k = Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show k]
+
 listToParams :: [Cpt] -> Either [GladosError] Params
 listToParams = mapM getIdentifier
 
@@ -44,8 +54,6 @@ listToArgs = mapM cptToAst
 identifierToAst :: String -> Either [GladosError] Ast
 identifierToAst s = Right (Call s [])
 
-keywordToAst :: Keyword -> Either [GladosError] Ast
-keywordToAst _ = Left [Cpt InvalidCpt]
 
 -- defineToAst :: [Cpt] -> Maybe Ast
 -- defineToAst [Identifier a, b] = cptToAst b >>= (Just . Define a)
@@ -57,13 +65,10 @@ expressionToAst :: [Cpt] -> Either [GladosError] Ast
 expressionToAst [Keyword Cpt.Keyword.Lambda, Cpt.Cpt.Expression ps, b] = listToParams ps >>= (\params ->
   cptToAst b >>= (Right . Ast.Ast.Lambda params))
 expressionToAst (Identifier s:ps) = listToArgs ps >>= (Right . Call s)
-expressionToAst _ = Left [Ast NotImplemented]
+expressionToAst e = Left [Global $ NotImplemented $ show e]
 
 operationToAst :: [Cpt] -> Either [GladosError] Ast
-operationToAst _ = Left [Ast NotImplemented]
-
-operatorToAst :: Operator -> Either [GladosError] Ast
-operatorToAst _ = Left [Ast InvalidAst]
+operationToAst o = Left [Global $ NotImplemented $ show o]
 
 cptToAst :: Cpt -> Either [GladosError] Ast
 cptToAst (Cpt.Cpt.Literal i) = Right (Value i)
@@ -72,7 +77,7 @@ cptToAst (Cpt.Cpt.Identifier s) = identifierToAst s
 cptToAst (Cpt.Cpt.Expression l) = expressionToAst l
 cptToAst (Cpt.Cpt.Keyword k) = keywordToAst k
 cptToAst (Cpt.Cpt.Operator o) = operatorToAst o
-cptToAst (Cpt.Cpt.Prototype _) = Left [Ast NotImplemented]
-cptToAst (Cpt.Cpt.Assignement _) = Left [Ast NotImplemented]
-cptToAst (Cpt.Cpt.Condition _) = Left [Ast NotImplemented]
-cptToAst (Cpt.Cpt.Lambda _) = Left [Ast NotImplemented]
+cptToAst (Cpt.Cpt.Prototype _) = Left [Global $ NotImplemented "function prototypes"]
+cptToAst (Cpt.Cpt.Assignement _) = Left [Global $ NotImplemented "assignements"]
+cptToAst (Cpt.Cpt.Condition _) = Left [Global $ NotImplemented "conditions"]
+cptToAst (Cpt.Cpt.Lambda _) = Left [Global $ NotImplemented "lambdas"]
