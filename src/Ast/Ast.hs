@@ -8,6 +8,7 @@
 module Ast.Ast (
   Ast (Define, Value, Lambda, Call, Operation, Condition),
   cptToAst,
+  expressionToAst,
   operationToAst,
   listToParams,
   Params,

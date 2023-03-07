@@ -9,7 +9,7 @@ import Cpt.Cpt (
     Cpt (Literal, Identifier, Operation),
     )
 import Cpt.Literal (Literal(Int))
-import Error (GladosError (Ast), AstError (..))
+import Error (GladosError (Ast, Cpt), AstError (..), CptError (..), CptErrorReason (..))
 
 -- -------------------------------------------------------------------------- --
 --                                  Test list                                 --
@@ -30,7 +30,7 @@ listToParamsFullIdentifiers = TestCase (assertEqual "For listToParams [a, b]"
 
 listToParamsNotFullIdentifiers :: Test
 listToParamsNotFullIdentifiers  = TestCase (assertEqual "For listToParams [1, b]"
-    (Left [Cpt $ InvalidCpt $ "Not an identifier " ++ show (Literal (Int 1))])
+    (Left [Cpt $ InvalidCpt InvalidCptNotExpression $ show (Literal (Int 1))])
     (listToParams [Literal (Int 1), Identifier "b"])
     )
 
@@ -40,6 +40,6 @@ listToParamsNotFullIdentifiers  = TestCase (assertEqual "For listToParams [1, b]
 
 listToAstInteger :: Test
 listToAstInteger = TestCase (assertEqual "For listToAst Integer"
-    (Left [Cpt $ InvalidCpt])
+    (Left [Cpt $ InvalidCpt InvalidCptNotTreatable $ show [Literal (Int 1), Identifier "b"]])
     (expressionToAst [Literal (Int 1), Identifier "b"])
     )
