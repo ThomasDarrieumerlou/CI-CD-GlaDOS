@@ -129,6 +129,10 @@ defMain = GlobalDefinition
     Global.parameters = ([], False),
     Global.basicBlocks = [
       BasicBlock (s2n "entry") [
+        UnName 0 := Add False False (ConstantOperand $ Constant.Int 32 1) (ConstantOperand $ Constant.Int 32 2) [],
+        UnName 1 := Sub False False (ConstantOperand $ Constant.Int 32 3) (ConstantOperand $ Constant.Int 32 4) [],
+        UnName 2 := Mul False False (ConstantOperand $ Constant.Int 32 5) (ConstantOperand $ Constant.Int 32 6) [],
+        UnName 3 := SDiv False (ConstantOperand $ Constant.Int 32 7) (ConstantOperand $ Constant.Int 32 8) []        
     ] (Do $ Ret (Just (ConstantOperand $ Constant.Int 32 0)) [])
     ]
   }
@@ -144,4 +148,3 @@ compileModuleToObj :: [Ast] -> IO ()
 compileModuleToObj a = withContext $ \context ->
      withModuleFromAST context (generateModule a)  $ \p ->
         writeLLVMAssemblyToFile (File "glados.ll") p
-        
