@@ -1,0 +1,2 @@
+test :: Int -> Int -> Int
+test x y = 1 + 1
